@@ -1,0 +1,47 @@
+#!/bin/bash
+set -e
+
+# Resolve this script's real directory, following symlinks (bash 3.2 safe).
+SRC="${BASH_SOURCE[0]}"
+while [ -L "$SRC" ]; do
+  DIR=$(cd -P "$(dirname "$SRC")" && pwd)
+  SRC=$(readlink "$SRC")
+  [[ "$SRC" != /* ]] && SRC="$DIR/$SRC"
+done
+DEVC_HOME=$(cd -P "$(dirname "$SRC")" && pwd)
+export DEVC_HOME
+
+usage() {
+  cat <<'USAGE'
+devc - development containers for the Apple container CLI
+
+usage:
+  devc init <repo>               copy the Dockerfile template into <repo>
+  devc rebuild <repo>            build the <repo> image
+  devc rebuild                   remove every image
+  devc reset <repo> [port ...]   run the <repo> container
+  devc reset                     remove every container
+  devc version                   print the installed version
+
+<repo> is a directory in the current working directory; override the
+lookup with WORKSPACE_DIR.
+USAGE
+}
+
+COMMAND="${1:-}"
+[ -n "$COMMAND" ] && shift
+
+case "$COMMAND" in
+  init)    exec bash "$DEVC_HOME/init.sh" "$@" ;;
+  rebuild) exec bash "$DEVC_HOME/rebuild.sh" "$@" ;;
+  reset)   exec bash "$DEVC_HOME/reset.sh" "$@" ;;
+  version|--version)
+    cat "$DEVC_HOME/.version" 2>/dev/null || echo "unknown"
+    ;;
+  ""|help|-h|--help) usage ;;
+  *)
+    echo "devc: unknown command '$COMMAND'" >&2
+    usage >&2
+    exit 1
+    ;;
+esac
